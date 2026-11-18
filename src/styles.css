@@ -1,0 +1,23 @@
+body {
+  margin: 0;
+  background: #fff;
+  color: #111;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  line-height: 1.45;
+}
+main { max-width: 1200px; margin: 0 auto; padding: 16px; }
+h1 { font-size: 1.4rem; margin: 0 0 8px; }
+.lead, .note { margin: 8px 0; }
+.banner { background: #fff7ed; border: 1px solid #fdba74; padding: 8px 12px; border-radius: 4px; }
+.readout { border-collapse: collapse; margin: 12px 0; }
+.readout th { text-align: left; font-weight: normal; padding: 4px 16px 4px 0; }
+.readout td { font-weight: bold; font-variant-numeric: tabular-nums; padding: 4px 0; }
+.axis-toggle { border: 1px solid #ccc; border-radius: 4px; margin: 12px 0; display: flex; flex-wrap: wrap; gap: 4px 20px; }
+.chart-box { position: relative; height: 440px; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 8px 0; font-size: 0.9rem; }
+.key { display: inline-flex; align-items: center; gap: 6px; }
+.swatch-bar { display: inline-block; width: 90px; height: 10px; }
+.swatch-sampled { display: inline-block; width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid #000; background: #26828e; }
+.swatch-line { display: inline-block; width: 28px; border-top: 2px solid #111; }
+.swatch-line.sample { border-top: 2px dashed #c2410c; }
+.swatch-gap { display: inline-block; width: 14px; height: 12px; background: rgba(220, 38, 38, 0.18); border: 1px dashed rgba(220, 38, 38, 0.6); }

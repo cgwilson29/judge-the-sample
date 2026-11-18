@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --test"
   },
   "repository": {
     "type": "git",
@@ -21,6 +22,7 @@
   "homepage": "https://github.com/cgwilson29/judge-the-sample#readme",
   "private": true,
   "dependencies": {
+    "chart.js": "4.6.1",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },
