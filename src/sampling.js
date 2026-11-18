@@ -154,6 +154,101 @@ export function stratifiedSample(strata, values, n, rng) {
   return { ok: true, H: strata.length, strata: perStratum, indices, estimate };
 }
 
+// ---------- Repeated sampling ----------
+
+export const MIN_REPS = 100;
+export const MAX_REPS = 1000;
+
+// Each condition gets its own reproducible random stream from (seed, method, n, strata column), so
+// the same condition always gets the same stream, whichever experiment runs it.
+export function conditionSeed(seed, method, n, strataKey = "") {
+  let h = 0x811c9dc5; // FNV-1a
+  for (const ch of `${method}|${n}|${strataKey}`) {
+    h ^= ch.charCodeAt(0);
+    h = Math.imul(h, 0x01000193);
+  }
+  h ^= seed >>> 0;
+  h = Math.imul(h ^ (h >>> 16), 0x45d9f3b);
+  return (h ^ (h >>> 16)) >>> 0;
+}
+
+// Summary of R estimates against the true mean of the population they were drawn from.
+// bias = mean of estimates - true mean; SD divides by R; RMSE = sqrt(mean of (estimate - true mean)^2);
+// so RMSE^2 = bias^2 + SD^2. mcse = SD / sqrt(R) (Monte Carlo standard error of the mean of estimates).
+export function summarizeEstimates(estimates, trueMeanValue) {
+  const R = estimates.length;
+  const m = mean(estimates);
+  let ss = 0;
+  let se = 0;
+  for (const e of estimates) {
+    ss += (e - m) ** 2;
+    se += (e - trueMeanValue) ** 2;
+  }
+  const sd = Math.sqrt(ss / R);
+  return { meanOfEstimates: m, bias: m - trueMeanValue, sd, rmse: Math.sqrt(se / R), mcse: sd / Math.sqrt(R) };
+}
+
+// Systematic sampling, whole-number interval: rows for a given start r (1..k).
+export function systematicRowsFromStart(N, n, r) {
+  checkSize(N, n);
+  if (N % n !== 0) throw new Error("whole-number design needs N/n to be a whole number");
+  const k = N / n;
+  if (!Number.isInteger(r) || r < 1 || r > k) throw new Error(`start must be 1..${k}`);
+  return Array.from({ length: n }, (_, j) => r + j * k - 1); // 0-based indices
+}
+
+// Exact enumeration for systematic sampling with a whole-number interval: all k starts, each once.
+export function systematicEnumeration(values, n) {
+  const N = values.length;
+  const k = N / n;
+  const starts = [];
+  const estimates = [];
+  for (let r = 1; r <= k; r++) {
+    starts.push(r);
+    estimates.push(sampleMean(values, systematicRowsFromStart(N, n, r)));
+  }
+  return { starts, estimates };
+}
+
+// Repeated sampling for one condition.
+// - Systematic with a whole-number interval: EXACT enumeration of all k starts (no seed, no random draws).
+// - Otherwise: MONTE CARLO, `reps` separate samples (each n distinct rows, without replacement) from a
+//   seeded stream; a row may appear again in a later repetition.
+// strataKey labels the stratification column (stratified only) and feeds the condition's seed.
+export function repeatedSampling({ method, values, n, reps, seed, strata, strataKey = "" }) {
+  const N = values.length;
+  checkSize(N, n);
+  const mu = trueMean(values);
+  const base = { method, n, N, trueMean: mu, strataKey: method === "stratified" ? strataKey : "" };
+
+  if (method === "systematic" && N % n === 0) {
+    const { starts, estimates } = systematicEnumeration(values, n);
+    return { ...base, type: "exact", seed: null, count: starts.length, starts, design: "whole", k: N / n, estimates, ...summarizeEstimates(estimates, mu) };
+  }
+
+  if (!Number.isInteger(reps) || reps < MIN_REPS || reps > MAX_REPS) {
+    throw new Error(`repetitions must be a whole number from ${MIN_REPS} to ${MAX_REPS} (got ${reps})`);
+  }
+  if (!isValidSeed(seed)) throw new Error(`seed must be a whole number from 0 to ${MAX_SEED}`);
+  const rng = mulberry32(conditionSeed(seed, method, n, base.strataKey));
+  const estimates = new Array(reps);
+  let extra = {};
+  if (method === "srs") {
+    for (let i = 0; i < reps; i++) estimates[i] = sampleMean(values, srsIndices(N, n, rng));
+  } else if (method === "systematic") {
+    for (let i = 0; i < reps; i++) estimates[i] = sampleMean(values, systematicSample(N, n, rng).indices);
+    extra = { design: "fractional", k: N / n };
+  } else if (method === "stratified") {
+    const alloc = proportionalAllocation(strata.map((s) => s.indices.length), n);
+    if (!alloc.ok) throw new Error(alloc.reason);
+    for (let i = 0; i < reps; i++) estimates[i] = stratifiedSample(strata, values, n, rng).estimate;
+    extra = { allocation: strata.map((s, h) => ({ label: s.label, N_h: s.indices.length, n_h: alloc.allocation[h] })) };
+  } else {
+    throw new Error(`unknown method "${method}"`);
+  }
+  return { ...base, type: "Monte Carlo", seed, count: reps, estimates, ...extra, ...summarizeEstimates(estimates, mu) };
+}
+
 // ---------- One single sample for the display ----------
 
 // method: "srs" | "systematic" | "stratified". strata is needed for "stratified" only.

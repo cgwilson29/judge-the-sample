@@ -27,7 +27,7 @@ For each stage: the option I chose, why, and what it is meant to help a user lea
 
 - Stage 2, visualization (include one visual feature meant to reveal a sampling problem): I chose to use a timeline of the week (Design 1) in combination with a week heatmap, allowing a sampling problem to be identified with empty stretches and heatmap color visually. This was selected for ease of reading and understanding the data, in an effort to help the user learn that this data has missing values (identified by the heatmap) and does not equate rows with timestamps.
 - Stage 3, sampling interactions and stratification column: I chose to utilize a single method selector with rule panel alongside a step-through (show next row) for systematic sampling. This allows a user to understand each method without overcluttering the display, providing detailed explanations of their selections as the user proceeds, by understanding how each method samples/stratifies the data.
-- Stage 4, presentation of the method comparison and sample-size experiments:
+- Stage 4, presentation of the method comparison and sample-size experiments: I chose to present this section as dot strips on a shared axis (with one row per condition) to visualize every visible estimate and allow direct comparison of rows between each experiement. The user take away should be how methods and sample sizes affect proximity to the true mean and how realiable the estimates are.
 - Stage 5, challenge controls and my alternative method or correction:
 
 ## 3. Results table
@@ -41,11 +41,11 @@ value for modified rows). Keep each result in its own row: never pool estimates.
 
 | Experiment | Population or condition | Method | Settings | Seed (or exact) | n | Repetitions or starts | Type | True mean | Bias | SD | RMSE |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| Methods at n = 100 | baseline | Simple random | | | 100 | | | | | | |
-| Methods at n = 100 | baseline | Systematic | | | 100 | | | | | | |
-| Methods at n = 100 | baseline | Stratified | | | 100 | | | | | | |
-| Sample size | baseline | Simple random | | | 1 | | | | | | |
-| Sample size | baseline | Simple random | | | 10 | | | | | | |
+| Methods at n = 100 | baseline | Simple random | 	Without replacement| 20261118| 100 | 100 repetitions| Monte Carlo| 66.41| +0.15| 1.84| 1.85|
+| Methods at n = 100 | baseline | Systematic | Fractional interval, k = 98.64, new random start each repetition, file row order| 20261118| 100 | 100 repetitions| Monte Carlo| 66.41| −0.05| 1.33| 1.33|
+| Methods at n = 100 | baseline | Stratified | By Activity state (activity_state column); proportional allocation (largest remainder, ≥1 per stratum): sleep 30, rest 60, exercise 10| 20261118| 100 | 100 repetitions| Monte Carlo| 66.41| −0.02| 1.13| 1.13|
+| Sample size | baseline | Simple random | Without replacement| 20261118| 1 | 100 repetitions| Monte Carlo| 66.41| −0.80| 17.02| 17.03|
+| Sample size | baseline | Simple random | Without replacement| 20261118| 10 | 100 repetitions| Monte Carlo| 66.41| +0.85| 6.24| 6.30|
 | Challenge | baseline | (method I challenged) | | | | | | | | | |
 | Challenge | modified | (method I challenged) | | | | | | | | | |
 | Challenge | baseline | (alternative or correction) | | | | | | | | | |
@@ -57,8 +57,10 @@ rows use the same n; a challenge baseline row may repeat a matching stage 4 resu
 
 ## 4. Findings (in my own words, using my own numbers)
 
-- (a) Method comparison: the three sampling methods compared at n = 100 (bias versus variability, and for which population):
+- (a) Method comparison: the three sampling methods compared at n = 100 (bias versus variability, and for which population): 
+  - The three sampling methods at n=100 showed similarities between systematic and stratified sampling, where systematic had a bias of -0.05 and variability of 1.33 as compared to stratified sampling bias of -0.02 and variability of 1.13. Simple random sampling without replacement had a +0.15 bias, and 1.84 variability, showing higher variability/spread and bias towards higher heart rate mean as compared to the true mean. Thus, for simple random sampling method a typical estimate is off by about 1.85 beats per minute, with systematic estimates off by about 1.33 bpm, and stratified estiamtes off by about 1.13bpm.
 - (b) Sample-size finding: how sample size affects the spread of estimates and the estimation error, and what a larger sample cannot fix:
+  - Increasing the sample size reduces the variability/standard deviation of estimates and trends towards the true mean, as shown by n=1 SD 17.02, n=10 SD 6.24, and n=100 SD 1.84. As the SD narrows, the variation in estimates becomes much smaller and approaches the true mean. This is also exemplified by the RMSE of each, accounting for bias and SD, where RMSE decreases (respectively) and states that the typical size of the error of a single estimate gets smaller as sample size increases. A larger sample size however cannot fix underlying measurement error or other biases liek selection or systematic bias.
 
 ## 5. Challenge (hypothesis written independently, before consulting my agent)
 

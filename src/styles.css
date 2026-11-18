@@ -35,3 +35,11 @@ h2 { font-size: 1.1rem; margin: 16px 0 6px; }
 .alloc th, .alloc td { border: 1px solid #ddd; padding: 4px 8px; text-align: right; }
 .alloc th:first-child, .alloc td:first-child { text-align: left; }
 .alloc .total td { font-weight: bold; }
+.experiments { border-top: 2px solid #ccc; margin-top: 24px; padding-top: 8px; }
+h3 { font-size: 1rem; margin: 20px 0 4px; }
+h4 { font-size: 0.95rem; margin: 12px 0 4px; }
+.run { margin: 4px 0 8px; }
+.strip-box { position: relative; }
+.table-wrap { overflow-x: auto; }
+.table-wrap .alloc { display: table; }
+.alloc td.settings { text-align: left; max-width: 22em; }

@@ -7,6 +7,7 @@ import { VIRIDIS_GRADIENT } from "./colorScale.js";
 import Timeline from "./Timeline.jsx";
 import Controls from "./Controls.jsx";
 import RulePanel, { dec, stepCalc } from "./RulePanel.jsx";
+import Experiments from "./Experiments.jsx";
 
 const fmt = (x) => x.toFixed(2);
 const int = (x) => x.toLocaleString("en-US");
@@ -212,6 +213,8 @@ export default function App() {
           every k-th entry in an arbitrary list.
         </p>
       </section>
+
+      <Experiments values={values} rows={population} />
     </main>
   );
 }

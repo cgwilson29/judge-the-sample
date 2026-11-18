@@ -279,3 +279,136 @@ test("means: true mean uses all N rows (value not printed)", () => {
   for (const r of rows) s += r.heart_rate_bpm;
   assert.ok(Math.abs(trueMean(values) - s / N) < 1e-9);
 });
+
+// ---------- Repeated sampling (stage 4) ----------
+// These checks never print experiment results.
+import {
+  repeatedSampling, summarizeEstimates, systematicEnumeration, systematicRowsFromStart, conditionSeed,
+} from "../src/sampling.js";
+
+const actStrata = groupRows(rows, "activity_state");
+
+test("repeated: number of estimates equals the repetition count (100 and 1,000), all three methods", () => {
+  for (const reps of [100, 1000]) {
+    for (const method of ["srs", "systematic", "stratified"]) {
+      const r = repeatedSampling({ method, values, n: 100, reps, seed: 3, strata: actStrata, strataKey: "activity_state" });
+      assert.equal(r.type, "Monte Carlo");
+      assert.equal(r.estimates.length, reps);
+      assert.equal(r.count, reps);
+      assert.equal(r.seed, 3);
+    }
+  }
+});
+
+test("repeated: each repetition is one sample of n distinct rows and its estimate is that sample's estimator", () => {
+  const seed = 17, reps = 100;
+  for (const n of [1, 10, 100]) {
+    const r = repeatedSampling({ method: "srs", values, n, reps, seed });
+    const rng = mulberry32(conditionSeed(seed, "srs", n));
+    for (let i = 0; i < reps; i++) {
+      const idx = srsIndices(N, n, rng);
+      checkDistinct(idx, N, n);
+      assert.equal(r.estimates[i], sampleMean(values, idx));
+    }
+  }
+  {
+    const r = repeatedSampling({ method: "systematic", values, n: 100, reps, seed });
+    const rng = mulberry32(conditionSeed(seed, "systematic", 100));
+    for (let i = 0; i < reps; i++) {
+      const idx = systematicSample(N, 100, rng).indices;
+      checkDistinct(idx, N, 100);
+      assert.equal(r.estimates[i], sampleMean(values, idx));
+    }
+  }
+  {
+    const r = repeatedSampling({ method: "stratified", values, n: 100, reps, seed, strata: actStrata, strataKey: "activity_state" });
+    const rng = mulberry32(conditionSeed(seed, "stratified", 100, "activity_state"));
+    for (let i = 0; i < reps; i++) {
+      const s = stratifiedSample(actStrata, values, 100, rng);
+      checkDistinct(s.indices, N, 100);
+      assert.equal(r.estimates[i], s.estimate); // population-weighted estimator
+    }
+  }
+});
+
+test("repeated: the same seed and settings reproduce the same estimates and summaries", () => {
+  for (const method of ["srs", "systematic", "stratified"]) {
+    const args = { method, values, n: 100, reps: 200, seed: DEFAULTS.seed, strata: actStrata, strataKey: "activity_state" };
+    assert.deepEqual(repeatedSampling(args), repeatedSampling(args));
+  }
+  for (const n of [1, 10]) {
+    const args = { method: "srs", values, n, reps: 100, seed: DEFAULTS.seed };
+    assert.deepEqual(repeatedSampling(args), repeatedSampling(args));
+  }
+});
+
+test("repeated: Experiment B's simple random n = 100 equals Experiment A's for the same seed and repetitions", () => {
+  const a = repeatedSampling({ method: "srs", values, n: 100, reps: 100, seed: DEFAULTS.seed });
+  const b = repeatedSampling({ method: "srs", values, n: 100, reps: 100, seed: DEFAULTS.seed });
+  assert.deepEqual(a.estimates, b.estimates);
+});
+
+test("repeated: repetition count must be a whole number from 100 to 1,000", () => {
+  for (const reps of [0, 99, 1001, 100.5, NaN]) {
+    assert.throws(() => repeatedSampling({ method: "srs", values, n: 10, reps, seed: 1 }));
+  }
+});
+
+test("exact enumeration: lists each of the k starts exactly once (N = 9,864, n = 8, k = 1,233)", () => {
+  const { starts, estimates } = systematicEnumeration(values, 8);
+  assert.equal(starts.length, 1233);
+  assert.deepEqual(starts, Array.from({ length: 1233 }, (_, i) => i + 1));
+  assert.equal(estimates.length, 1233);
+  // every row appears in exactly one start's sample
+  const seen = new Array(N).fill(0);
+  for (const r of starts) systematicRowsFromStart(N, 8, r).forEach((i) => seen[i]++);
+  assert.ok(seen.every((c) => c === 1));
+});
+
+test("exact enumeration: small population known answer, labelled exact with no seed", () => {
+  const vals = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]; // N = 12, n = 3, k = 4
+  const r = repeatedSampling({ method: "systematic", values: vals, n: 3, reps: 100, seed: 1 });
+  assert.equal(r.type, "exact");
+  assert.equal(r.seed, null);
+  assert.equal(r.count, 4);
+  assert.deepEqual(r.starts, [1, 2, 3, 4]);
+  assert.deepEqual(r.estimates, [5, 6, 7, 8]); // start r -> rows r, r+4, r+8 -> mean r+4
+  assert.equal(r.trueMean, 6.5);
+  assert.equal(r.bias, 0);
+  assert.ok(Math.abs(r.sd - Math.sqrt(1.25)) < 1e-12);
+  assert.ok(Math.abs(r.rmse - Math.sqrt(1.25)) < 1e-12);
+});
+
+test("summary: bias, SD, RMSE and MC s.e. match hand calculations", () => {
+  // estimates 4, 6, 8, 10; true mean 5 -> mean 7, bias 2, SD = sqrt((9+1+1+9)/4) = sqrt(5),
+  // RMSE = sqrt((1+1+9+25)/4) = 3, MC s.e. = sqrt(5)/2
+  const s = summarizeEstimates([4, 6, 8, 10], 5);
+  assert.equal(s.meanOfEstimates, 7);
+  assert.equal(s.bias, 2);
+  assert.ok(Math.abs(s.sd - Math.sqrt(5)) < 1e-12);
+  assert.ok(Math.abs(s.rmse - 3) < 1e-12);
+  assert.ok(Math.abs(s.mcse - Math.sqrt(5) / 2) < 1e-12);
+  assert.ok(Math.abs(s.rmse ** 2 - (s.bias ** 2 + s.sd ** 2)) < 1e-12); // 9 = 4 + 5
+});
+
+test("summary: RMSE² = bias² + SD² (random lists, and real repeated-sampling output)", () => {
+  const rng = mulberry32(31);
+  for (let t = 0; t < 200; t++) {
+    const est = Array.from({ length: 100 + Math.floor(rng() * 900) }, () => 50 + 40 * rng());
+    const s = summarizeEstimates(est, 40 + 40 * rng());
+    assert.ok(Math.abs(s.rmse ** 2 - (s.bias ** 2 + s.sd ** 2)) < 1e-9);
+  }
+  for (const method of ["srs", "systematic", "stratified"]) {
+    const r = repeatedSampling({ method, values, n: 100, reps: 100, seed: 5, strata: actStrata, strataKey: "activity_state" });
+    assert.ok(Math.abs(r.rmse ** 2 - (r.bias ** 2 + r.sd ** 2)) < 1e-9);
+  }
+});
+
+test("summary: constant population gives bias = SD = RMSE = 0 for every method", () => {
+  const vals = new Array(50).fill(70);
+  const strata = [{ label: "a", indices: [...Array(20).keys()] }, { label: "b", indices: [...Array(30).keys()].map((i) => i + 20) }];
+  for (const method of ["srs", "systematic", "stratified"]) {
+    const r = repeatedSampling({ method, values: vals, n: 7, reps: 100, seed: 2, strata, strataKey: "x" });
+    assert.ok(Math.abs(r.bias) < 1e-12 && r.sd < 1e-12 && r.rmse < 1e-12, method);
+  }
+});
