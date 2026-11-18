@@ -36,24 +36,36 @@ export default function MusicControl() {
   useEffect(() => savePref(pref), [pref]);
   useEffect(() => music?.setVolume(pref.volume), [music, pref.volume]);
 
-  // When music is on but not yet playing, start on the first user gesture anywhere on the page.
+  // Audio may only start inside a user gesture, so start() is always called from an event handler.
+  const play = () =>
+    music
+      .start()
+      .then(() => setPlaying(music.running))
+      .catch(() => {});
+
+  // Music on by default: start it on the visitor's first click, tap or key press anywhere on the page.
+  const onRef = useRef(pref.on);
+  onRef.current = pref.on;
   useEffect(() => {
-    if (!music) return;
-    if (!pref.on) {
+    if (!music || playing) return;
+    const events = ["click", "touchend", "keydown"];
+    const onGesture = (e) => {
+      if (e.target.closest?.(".music-control")) return; // the music button handles itself
+      if (onRef.current) play();
+    };
+    events.forEach((ev) => window.addEventListener(ev, onGesture, true));
+    return () => events.forEach((ev) => window.removeEventListener(ev, onGesture, true));
+  }, [music, playing]);
+
+  const toggle = () => {
+    const on = !pref.on;
+    if (on) play();
+    else {
       music.stop();
       setPlaying(false);
-      return;
     }
-    const begin = () => music.start().then(() => setPlaying(music.running)).catch(() => {});
-    begin(); // works immediately if the browser already allows sound
-    const events = ["pointerdown", "keydown"];
-    const onGesture = () => {
-      begin();
-      events.forEach((e) => window.removeEventListener(e, onGesture, true));
-    };
-    events.forEach((e) => window.addEventListener(e, onGesture, true));
-    return () => events.forEach((e) => window.removeEventListener(e, onGesture, true));
-  }, [music, pref.on]);
+    setPref((p) => ({ ...p, on }));
+  };
 
   if (!music) return null;
   return (
@@ -62,7 +74,7 @@ export default function MusicControl() {
         type="button"
         className={pref.on ? "active" : ""}
         aria-pressed={pref.on}
-        onClick={() => setPref((p) => ({ ...p, on: !p.on }))}
+        onClick={toggle}
       >
         ♪ Music {pref.on ? "on" : "off"}
       </button>

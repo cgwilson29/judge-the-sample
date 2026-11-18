@@ -28,7 +28,7 @@ export function createMusic() {
   let volume = 0.5;
   let running = false;
   let wanted = false; // last request from the user: play (true) or stop (false)
-  let starting = null; // shared promise while the browser is unlocking audio
+  let suspendTimer = null;
 
   function build() {
     ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -166,18 +166,15 @@ export function createMusic() {
     get running() {
       return running;
     },
+    // Call from inside a click/keypress handler: browsers only unlock audio during a user gesture, so
+    // every call asks to resume (a pending request from before the gesture would never complete).
     start() {
       wanted = true;
+      clearTimeout(suspendTimer); // a quick off-then-on must not suspend the restarted audio
       if (running) return Promise.resolve();
-      if (!starting) {
-        if (!ctx) build();
-        starting = ctx.resume().finally(() => {
-          starting = null;
-        });
-      }
-      return starting.then(() => {
-        if (!wanted || running) return;
-        begin();
+      if (!ctx) build();
+      return ctx.resume().then(() => {
+        if (wanted && !running && ctx.state === "running") begin(); // begin() sets running, so it runs once
       });
     },
     stop() {
@@ -190,8 +187,8 @@ export function createMusic() {
       g.linearRampToValueAtTime(0, ctx.currentTime + 0.4);
       clearInterval(timer);
       timer = null;
-      setTimeout(() => {
-        if (!running) ctx.suspend();
+      suspendTimer = setTimeout(() => {
+        if (!running && !wanted) ctx.suspend();
       }, 500);
     },
     setVolume(v) {
