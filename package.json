@@ -1,0 +1,31 @@
+{
+  "name": "judge-the-sample",
+  "version": "1.0.0",
+  "description": "Judge the Sample: browser-only sampling app (wearable heart rate)",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cgwilson29/judge-the-sample.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/cgwilson29/judge-the-sample/issues"
+  },
+  "homepage": "https://github.com/cgwilson29/judge-the-sample#readme",
+  "private": true,
+  "dependencies": {
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "6.3.0",
+    "vite": "8.3.8"
+  }
+}
