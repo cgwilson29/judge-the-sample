@@ -40,6 +40,33 @@ export function parsePopulation(text) {
   });
 }
 
+// ---------- Strata (observable group columns) ----------
+
+export const DAY_LABELS = ["Mon 25 Apr", "Tue 26 Apr", "Wed 27 Apr", "Thu 28 Apr", "Fri 29 Apr", "Sat 30 Apr", "Sun 1 May"];
+export const BAND_LABELS = ["Night 00:00–05:59", "Morning 06:00–11:59", "Afternoon 12:00–17:59", "Evening 18:00–23:59"];
+
+// Each column: a key, a display name, its levels in display order, and how to read a row's level.
+// Day and time-of-day band are derived from the timestamp only.
+export const STRATA_COLUMNS = [
+  { key: "activity_state", name: "Activity state (activity_state column)", levels: ["sleep", "rest", "exercise"], of: (r) => r.activity_state },
+  { key: "day", name: "Day of the week (from timestamp)", levels: DAY_LABELS, of: (r) => DAY_LABELS[Math.floor(r.minute / 1440)] },
+  { key: "band", name: "Time-of-day band, 6 hours each (from timestamp)", levels: BAND_LABELS, of: (r) => BAND_LABELS[Math.floor((r.minute % 1440) / 360)] },
+];
+
+// Splits the rows into strata [{ label, indices }] (0-based row indices), in the column's level order.
+// Levels with no rows are left out.
+export function groupRows(rows, columnKey) {
+  const col = STRATA_COLUMNS.find((c) => c.key === columnKey);
+  if (!col) throw new Error(`unknown stratification column "${columnKey}"`);
+  const byLevel = new Map(col.levels.map((l) => [l, []]));
+  rows.forEach((r, i) => {
+    const level = col.of(r);
+    if (!byLevel.has(level)) throw new Error(`row ${r.row_id}: unexpected ${columnKey} value "${level}"`);
+    byLevel.get(level).push(i);
+  });
+  return col.levels.filter((l) => byLevel.get(l).length > 0).map((l) => ({ label: l, indices: byLevel.get(l) }));
+}
+
 // Gaps: places where consecutive rows are more than one minute apart.
 // `afterIndex` is the 0-based index of the row just before the gap; `missing` is the number of
 // minutes with no reading between the two rows.

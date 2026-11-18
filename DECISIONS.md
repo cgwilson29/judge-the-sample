@@ -26,7 +26,7 @@ my agent about it, and do not edit it afterwards; add a dated revision below ins
 For each stage: the option I chose, why, and what it is meant to help a user learn.
 
 - Stage 2, visualization (include one visual feature meant to reveal a sampling problem): I chose to use a timeline of the week (Design 1) in combination with a week heatmap, allowing a sampling problem to be identified with empty stretches and heatmap color visually. This was selected for ease of reading and understanding the data, in an effort to help the user learn that this data has missing values (identified by the heatmap) and does not equate rows with timestamps.
-- Stage 3, sampling interactions and stratification column:
+- Stage 3, sampling interactions and stratification column: I chose to utilize a single method selector with rule panel alongside a step-through (show next row) for systematic sampling. This allows a user to understand each method without overcluttering the display, providing detailed explanations of their selections as the user proceeds, by understanding how each method samples/stratifies the data.
 - Stage 4, presentation of the method comparison and sample-size experiments:
 - Stage 5, challenge controls and my alternative method or correction:
 

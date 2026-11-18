@@ -1,14 +1,14 @@
 import { useEffect, useRef } from "react";
 import { Chart, ScatterController, PointElement, LinearScale, Tooltip } from "chart.js";
 import { colorFor } from "./colorScale.js";
+import { DAY_LABELS } from "./population.js";
 
 Chart.register(ScatterController, PointElement, LinearScale, Tooltip);
 
-const DAY_LABELS = ["Mon 25 Apr", "Tue 26 Apr", "Wed 27 Apr", "Thu 28 Apr", "Fri 29 Apr", "Sat 30 Apr", "Sun 1 May"];
 const MINUTES_IN_WEEK = 7 * 1440;
 const MIN_GAP_PX = 2; // short gaps are drawn at least this wide so they stay visible
 
-// Draws the gap bands/markers behind the points and the two labelled mean lines on top.
+// Draws the gap bands/markers behind the points and the labelled mean lines on top.
 const overlayPlugin = {
   id: "gapsAndMeans",
   beforeDatasetsDraw(chart, _args, opts) {
@@ -20,7 +20,7 @@ const overlayPlugin = {
     ctx.clip();
     for (const g of opts.gaps) {
       if (opts.axisMode === "time") {
-        // Missing minutes run from fromMinute+1 to toMinute-1; band covers them.
+        // Missing minutes run from fromMinute+1 to toMinute-1; the band covers them.
         let x0 = x.getPixelForValue(g.fromMinute + 0.5);
         let x1 = x.getPixelForValue(g.toMinute - 0.5);
         if (x1 - x0 < MIN_GAP_PX) {
@@ -67,24 +67,26 @@ const overlayPlugin = {
       ctx.fillText(label, lx, ly);
       ctx.restore();
     };
-    // Put the higher line's label above it and the lower line's label below it so they don't overlap.
-    const trueAbove = opts.trueMean >= opts.sampleMean;
+    const hasSample = opts.sampleMean != null;
+    // The higher line's label goes above it and the lower line's below it so they don't overlap.
+    const trueAbove = !hasSample || opts.trueMean >= opts.sampleMean;
     drawLine(opts.trueMean, opts.trueLabel, [], "#111", trueAbove);
-    drawLine(opts.sampleMean, opts.sampleLabel, [7, 5], "#c2410c", !trueAbove);
+    if (hasSample) drawLine(opts.sampleMean, opts.sampleLabel, [7, 5], "#c2410c", !trueAbove);
   },
 };
 
-export default function Timeline({ rows, sampleIndices, gaps, axisMode, trueMean, sampleMean, bpmRange }) {
+// sample = { indices, borderColors? (one per index), describe?(i) -> extra tooltip lines }
+export default function Timeline({ rows, sample, gaps, axisMode, trueMean, sampleMean, sampleLabel, bpmRange }) {
   const canvasRef = useRef(null);
 
   useEffect(() => {
     const [lo, hi] = bpmRange;
     const xOf = (r) => (axisMode === "time" ? r.minute : r.row_id);
-    const sampled = new Set(sampleIndices);
+    const sampled = new Set(sample.indices);
     const point = (r, i) => ({ x: xOf(r), y: r.heart_rate_bpm, i });
 
     const popData = rows.map(point);
-    const sampleData = sampleIndices.map((i) => point(rows[i], i));
+    const sampleData = sample.indices.map((i) => point(rows[i], i));
 
     const chart = new Chart(canvasRef.current, {
       type: "scatter",
@@ -97,8 +99,8 @@ export default function Timeline({ rows, sampleIndices, gaps, axisMode, trueMean
             pointRadius: 4.5,
             pointHoverRadius: 6,
             pointBackgroundColor: sampleData.map((p) => colorFor(p.y, lo, hi)),
-            pointBorderColor: "#000",
-            pointBorderWidth: 1.5,
+            pointBorderColor: sample.borderColors ?? "#000",
+            pointBorderWidth: sample.borderColors ? 2.5 : 1.5,
           },
           {
             label: "All recorded minutes",
@@ -143,12 +145,15 @@ export default function Timeline({ rows, sampleIndices, gaps, axisMode, trueMean
             callbacks: {
               title: () => "",
               label: (ctx) => {
-                const r = rows[ctx.raw.i];
-                return [
+                const i = ctx.raw.i;
+                const r = rows[i];
+                const lines = [
                   `Row ${r.row_id} — ${r.timestamp}`,
                   `${r.heart_rate_bpm.toFixed(1)} bpm, ${r.activity_state}`,
-                  sampled.has(ctx.raw.i) ? "In the temporary sample" : "Not sampled",
                 ];
+                if (sampled.has(i)) lines.push("In the sample", ...(sample.describe ? sample.describe(i) : []));
+                else lines.push("Not sampled");
+                return lines;
               },
             },
           },
@@ -159,14 +164,14 @@ export default function Timeline({ rows, sampleIndices, gaps, axisMode, trueMean
             trueMean,
             sampleMean,
             trueLabel: `True population mean: ${trueMean.toFixed(2)} bpm`,
-            sampleLabel: `Sample mean (temporary sample): ${sampleMean.toFixed(2)} bpm`,
+            sampleLabel,
           },
         },
       },
       plugins: [overlayPlugin],
     });
     return () => chart.destroy();
-  }, [rows, sampleIndices, gaps, axisMode, trueMean, sampleMean, bpmRange]);
+  }, [rows, sample, gaps, axisMode, trueMean, sampleMean, sampleLabel, bpmRange]);
 
   return (
     <div className="chart-box">
