@@ -93,7 +93,10 @@ export default function App() {
 
   return (
     <main>
-      <h1>Judge the Sample: wearable heart rate</h1>
+      <header className="site-header">
+        <h1>Judge the Sample</h1>
+        <p className="subtitle">Wearable heart rate · one wearer's week · which sample would you trust?</p>
+      </header>
       <p className="lead">
         Population: all <strong>{int(N)}</strong> recorded minutes in <code>data/heart_rate_week.csv</code> — one
         wearer's week, 25 April – 1 May 2016. Each point is one recorded minute; its colour shows that minute's heart

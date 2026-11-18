@@ -28,12 +28,12 @@ const overlayPlugin = {
           x0 = mid - MIN_GAP_PX / 2;
           x1 = mid + MIN_GAP_PX / 2;
         }
-        ctx.fillStyle = "rgba(220, 38, 38, 0.18)";
+        ctx.fillStyle = "rgba(255, 70, 70, 0.22)";
         ctx.fillRect(x0, area.top, x1 - x0, area.bottom - area.top);
       } else {
         // Row order: a thin dashed line between the two rows on either side of the gap.
         const px = x.getPixelForValue(opts.rowIds[g.afterIndex] + 0.5);
-        ctx.strokeStyle = "rgba(220, 38, 38, 0.6)";
+        ctx.strokeStyle = "rgba(255, 90, 90, 0.75)";
         ctx.lineWidth = 1;
         ctx.setLineDash([3, 3]);
         ctx.beginPath();
@@ -61,7 +61,7 @@ const overlayPlugin = {
       const w = ctx.measureText(label).width;
       const lx = area.right - w - 8;
       const ly = labelAbove ? py - 6 : py + 16;
-      ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+      ctx.fillStyle = "rgba(5, 7, 13, 0.85)";
       ctx.fillRect(lx - 4, ly - 12, w + 8, 16);
       ctx.fillStyle = color;
       ctx.fillText(label, lx, ly);
@@ -70,8 +70,8 @@ const overlayPlugin = {
     const hasSample = opts.sampleMean != null;
     // The higher line's label goes above it and the lower line's below it so they don't overlap.
     const trueAbove = !hasSample || opts.trueMean >= opts.sampleMean;
-    drawLine(opts.trueMean, opts.trueLabel, [], "#111", trueAbove);
-    if (hasSample) drawLine(opts.sampleMean, opts.sampleLabel, [7, 5], "#c2410c", !trueAbove);
+    drawLine(opts.trueMean, opts.trueLabel, [], "#ffffff", trueAbove);
+    if (hasSample) drawLine(opts.sampleMean, opts.sampleLabel, [7, 5], "#ff9b21", !trueAbove);
   },
 };
 
@@ -99,7 +99,7 @@ export default function Timeline({ rows, sample, gaps, axisMode, trueMean, sampl
             pointRadius: 4.5,
             pointHoverRadius: 6,
             pointBackgroundColor: sampleData.map((p) => colorFor(p.y, lo, hi)),
-            pointBorderColor: sample.borderColors ?? "#000",
+            pointBorderColor: sample.borderColors ?? "#ffffff",
             pointBorderWidth: sample.borderColors ? 2.5 : 1.5,
           },
           {

@@ -7,5 +7,5 @@ export const METHOD_NAMES = {
   stratified: "Stratified",
 };
 
-// Okabe–Ito colours (colour-blind safe), used to outline sampled points by stratum.
-export const STRATUM_COLORS = ["#E69F00", "#56B4E9", "#009E73", "#CC79A7", "#0072B2", "#D55E00", "#F0E442"];
+// Okabe–Ito colours (colour-blind safe; its dark blue swapped for white on the dark theme), used to outline sampled points by stratum.
+export const STRATUM_COLORS = ["#E69F00", "#56B4E9", "#009E73", "#CC79A7", "#ffffff", "#D55E00", "#F0E442"];

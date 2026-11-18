@@ -1,7 +1,7 @@
-// Colour-blind-safe sequential scale (viridis), used to colour each minute by its heart rate.
+// Colour-blind-safe sequential scale used to colour each minute by its heart rate: viridis from 25% to
+// 100% (its darkest quarter is left out so the lowest heart rates stay visible on the dark background).
 export const VIRIDIS = [
-  "#440154", "#482878", "#3e4989", "#31688e", "#26828e",
-  "#1f9e89", "#35b779", "#6ece58", "#b5de2b", "#fde725",
+  "#3b528b", "#2c728e", "#21918c", "#28ae80", "#5ec962", "#addc30", "#fde725",
 ];
 
 const RGB = VIRIDIS.map((h) => [1, 3, 5].map((k) => parseInt(h.slice(k, k + 2), 16)));

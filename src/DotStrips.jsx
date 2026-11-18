@@ -3,7 +3,7 @@ import { Chart, ScatterController, PointElement, LinearScale, Tooltip } from "ch
 
 Chart.register(ScatterController, PointElement, LinearScale, Tooltip);
 
-const ROW_COLORS = ["#0072B2", "#D55E00", "#009E73", "#CC79A7"];
+const ROW_COLORS = ["#00e5ff", "#ff9b21", "#3ddc97", "#ff5ad1"];
 const ROW_HEIGHT = 80;
 
 // Small, reproducible vertical offset per repetition so dots don't sit exactly on top of each other.
@@ -23,7 +23,7 @@ const overlayPlugin = {
         const tx = x.getPixelForValue(r.trueMean);
         const y0 = y.getPixelForValue(h - 0.45);
         const y1 = y.getPixelForValue(h + 0.45);
-        ctx.strokeStyle = "#111";
+        ctx.strokeStyle = "#ffffff";
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(tx, y0);
@@ -32,16 +32,16 @@ const overlayPlugin = {
         const label = `True mean (${r.populationLabel}): ${r.trueMean.toFixed(2)}`;
         const w = ctx.measureText(label).width;
         const lx = Math.min(Math.max(tx + 4, area.left), area.right - w);
-        ctx.fillStyle = "rgba(255,255,255,0.9)";
+        ctx.fillStyle = "rgba(5,7,13,0.85)";
         ctx.fillRect(lx - 2, y0, w + 4, 13);
-        ctx.fillStyle = "#111";
+        ctx.fillStyle = "#ffffff";
         ctx.fillText(label, lx, y0 + 10);
       });
     }
     // True population mean (one shared population)
     if (!opts.perRow) {
     const tx = x.getPixelForValue(opts.trueMean);
-    ctx.strokeStyle = "#111";
+    ctx.strokeStyle = "#ffffff";
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(tx, area.top);
@@ -51,9 +51,9 @@ const overlayPlugin = {
     const label = `True population mean: ${opts.trueMean.toFixed(2)} bpm`;
     const w = ctx.measureText(label).width;
     const lx = Math.min(Math.max(tx - w / 2, area.left), area.right - w);
-    ctx.fillStyle = "rgba(255,255,255,0.9)";
+    ctx.fillStyle = "rgba(5,7,13,0.85)";
     ctx.fillRect(lx - 3, area.top - 16, w + 6, 15);
-    ctx.fillStyle = "#111";
+    ctx.fillStyle = "#ffffff";
     ctx.fillText(label, lx, area.top - 4);
     }
 
@@ -62,13 +62,13 @@ const overlayPlugin = {
       const py = y.getPixelForValue(h + 0.36); // just below the row's dots (dots span ±0.25)
       const x0 = x.getPixelForValue(r.meanOfEstimates - r.sd);
       const x1 = x.getPixelForValue(r.meanOfEstimates + r.sd);
-      ctx.strokeStyle = "#111";
+      ctx.strokeStyle = "#ffffff";
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.moveTo(x0, py - 5); ctx.lineTo(x0, py); ctx.lineTo(x1, py); ctx.lineTo(x1, py - 5);
       ctx.stroke();
       const mx = x.getPixelForValue(r.meanOfEstimates);
-      ctx.fillStyle = "#fff";
+      ctx.fillStyle = "#05070d";
       ctx.beginPath();
       ctx.moveTo(mx, py - 7); ctx.lineTo(mx + 6, py); ctx.lineTo(mx, py + 7); ctx.lineTo(mx - 6, py);
       ctx.closePath();
