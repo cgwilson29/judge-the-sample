@@ -28,7 +28,7 @@ For each stage: the option I chose, why, and what it is meant to help a user lea
 - Stage 2, visualization (include one visual feature meant to reveal a sampling problem): I chose to use a timeline of the week (Design 1) in combination with a week heatmap, allowing a sampling problem to be identified with empty stretches and heatmap color visually. This was selected for ease of reading and understanding the data, in an effort to help the user learn that this data has missing values (identified by the heatmap) and does not equate rows with timestamps.
 - Stage 3, sampling interactions and stratification column: I chose to utilize a single method selector with rule panel alongside a step-through (show next row) for systematic sampling. This allows a user to understand each method without overcluttering the display, providing detailed explanations of their selections as the user proceeds, by understanding how each method samples/stratifies the data.
 - Stage 4, presentation of the method comparison and sample-size experiments: I chose to present this section as dot strips on a shared axis (with one row per condition) to visualize every visible estimate and allow direct comparison of rows between each experiement. The user take away should be how methods and sample sizes affect proximity to the true mean and how realiable the estimates are.
-- Stage 5, challenge controls and my alternative method or correction:
+- Stage 5, challenge controls and my alternative method or correction: I chose to challenge the systematic sampling given the baseline chronological order of the dataset, where the hypothesis is that chronological row ordering may produce biased estimates of the data mean because heart rate fluctuates according to time of day, activity, sleep, and other recurring patterns. This is meant to teach a user that at times systematic sampling can affect the outputs and may not serve as the best option for chronologically ordered data.
 
 ## 3. Results table
 
@@ -46,10 +46,10 @@ value for modified rows). Keep each result in its own row: never pool estimates.
 | Methods at n = 100 | baseline | Stratified | By Activity state (activity_state column); proportional allocation (largest remainder, ≥1 per stratum): sleep 30, rest 60, exercise 10| 20261118| 100 | 100 repetitions| Monte Carlo| 66.41| −0.02| 1.13| 1.13|
 | Sample size | baseline | Simple random | Without replacement| 20261118| 1 | 100 repetitions| Monte Carlo| 66.41| −0.80| 17.02| 17.03|
 | Sample size | baseline | Simple random | Without replacement| 20261118| 10 | 100 repetitions| Monte Carlo| 66.41| +0.85| 6.24| 6.30|
-| Challenge | baseline | (method I challenged) | | | | | | | | | |
-| Challenge | modified | (method I challenged) | | | | | | | | | |
-| Challenge | baseline | (alternative or correction) | | | | | | | | | |
-| Challenge | modified | (alternative or correction) | | | | | | | | | |
+| Challenge | baseline (all 9,864 minutes, original row order) | Systematic | Fractional interval, k = 98.64, new random start each repetition, file row order| 556228151| 100| 100 repetitions| Monte Carlo| 66.41| +0.00| 1.60| 1.60|
+| Challenge | modified (rows shuffled (shuffle seed 120729805), 9,864 minutes) | Systematic | Fractional interval, k = 98.64, new random start each repetition, file row order| 556228151| 100| 100 repetitions| Monte Carlo| 66.41| −0.14| 1.73| 1.74|
+| Challenge | baseline (all 9,864 minutes, original row order) | Stratified (time-of-day band) | By Time-of-day band, 6 hours each (from timestamp); proportional allocation (largest remainder, ≥1 per stratum): Night 00:00–05:59 25, Morning 06:00–11:59 25, Afternoon 12:00–17:59 25, Evening 18:00–23:59 25| 556228151| 100| 100 repetitions| Monte Carlo| 66.41| +0.11| 1.58| 1.59|
+| Challenge | modified (rows shuffled (shuffle seed 120729805), 9,864 minutes) | Stratified (time-of-day band) | By Time-of-day band, 6 hours each (from timestamp); proportional allocation (largest remainder, ≥1 per stratum): Night 00:00–05:59 25, Morning 06:00–11:59 25, Afternoon 12:00–17:59 25, Evening 18:00–23:59 25| 556228151| 100| 100 repetitions| Monte Carlo| 66.41| −0.12| 2.01	| 2.01	|
 
 The simple random n = 100 row is also the n = 100 sample-size result when the population and
 settings match. If I reran it with different settings, I add a separate row. All four challenge
@@ -66,21 +66,22 @@ rows use the same n; a challenge baseline row may repeat a matching stage 4 resu
 
 Hypothesis, written before I consult my agent:
 
-- Date written:
-- Method I chose to challenge:
-- The change to the population or its ordering:
-- Why the selection rule would interact with that change:
-- Evidence I expect across repeated samples:
-- Alternative method or correction I will compare, and why:
-- Evidence that would contradict my hypothesis:
+- Date written: 11-18-2026
+- Method I chose to challenge: Systematic Sampling
+- The change to the population or its ordering: Adjusting the order of rows to avoid chronologic interpretation
+- Why the selection rule would interact with that change: Shuffling row order prevents the selection rule from potentially choosing a block of similar time periods (numerous 'afternoons' or 1300s, etc).
+- Evidence I expect across repeated samples: For systematic sampling, I expect  the samples to more widely vary across time points (morning, afternoon, evening, night) instead of potentially sampling the same time periods
+- Alternative method or correction I will compare, and why:stratified sampling method comparison ensures representation across all time periods, accounting for any temporal relation to heart rate
+- Evidence that would contradict my hypothesis: Shuffling rows has no impact on time period selection
 
 After I test it:
 
 - Test settings (conditions, methods, alternative method or correction, n, seeds); results are in the table above:
 - (c) Challenge interpretation: did the evidence support my hypothesis? Bias versus variability, other explanations, what the alternative or correction showed, and any dated revision (keep the original above):
+  - The evidence did *not* support my hypothesis. Row shuffling had a marginally worse estimation of means in the Stratified sampling (modified) run, as evidenced by a bias of -0.14 (compared with baseline 0), and variation/SD of 1.73 (versus 1.6 baseline), suggesting that the baseline stratified sampling with random start did not reflect any significant impact by time of day selection. The time-period coverage chart additionally shows that distribution of night, morning, afternoon, and evening composition was nearly 25% for each band in each method. The alternative method of Stratified sampling additionally did not support the hypothesis, showing similar trends in the modified versus baseline data with worse variation/SD and RMSE.
 
 ## 6. AI use
 
-- Tools used:
-- What I asked my agent to do, and what I checked myself:
-- Automated checks my agent reported (I did not let it interpret my results):
+- Tools used: Claude Opus 5.5 (Medium), an AGENT_DATA.md file was created to outline this section.
+- What I asked my agent to do, and what I checked myself: Following the prompts verbatim as supplied in the Judge The Sameple github pages directions and starter zip files. I verified all checks as described on the same pages.
+- -Automated checks my agent reported (I did not let it interpret my results): My agent reported all automated checks as passed.

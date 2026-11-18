@@ -67,6 +67,28 @@ export function groupRows(rows, columnKey) {
   return col.levels.filter((l) => byLevel.get(l).length > 0).map((l) => ({ label: l, indices: byLevel.get(l) }));
 }
 
+// ---------- Modified copy (stage 5) ----------
+
+// A labelled MODIFIED COPY with the row order randomly shuffled (seeded Fisher–Yates permutation of all
+// rows). Each row keeps its own values (heart rate, timestamp, activity state); only the order changes.
+// New row objects are returned: `row_id` is the new position (1..N) and `orig_row_id` the original row.
+// The input array and the file on disk are never changed. `rng` is a seeded generator from sampling.js.
+export function shuffledCopy(rows, rng) {
+  const order = rows.map((_, i) => i);
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  return order.map((src, pos) => ({ ...rows[src], row_id: pos + 1, orig_row_id: rows[src].row_id }));
+}
+
+// Group index per row for a stratification column (e.g. time-of-day band), in the column's level order.
+export function groupIndexOf(rows, columnKey) {
+  const col = STRATA_COLUMNS.find((c) => c.key === columnKey);
+  if (!col) throw new Error(`unknown column "${columnKey}"`);
+  return { levels: col.levels, index: rows.map((r) => col.levels.indexOf(col.of(r))) };
+}
+
 // Gaps: places where consecutive rows are more than one minute apart.
 // `afterIndex` is the 0-based index of the row just before the gap; `missing` is the number of
 // minutes with no reading between the two rows.

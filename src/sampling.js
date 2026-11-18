@@ -215,38 +215,65 @@ export function systematicEnumeration(values, n) {
 // - Otherwise: MONTE CARLO, `reps` separate samples (each n distinct rows, without replacement) from a
 //   seeded stream; a row may appear again in a later repetition.
 // strataKey labels the stratification column (stratified only) and feeds the condition's seed.
-export function repeatedSampling({ method, values, n, reps, seed, strata, strataKey = "" }) {
+// population: "" for the baseline; a label such as "modified:shuffle=123" for a modified copy. It feeds the
+// condition's random stream, so baseline results match Experiment A for the same settings and a modified
+// population gets its own stream.
+// coverageGroups (optional): { levels, index } giving a group per row; the result then also reports, per
+// group, the population share N_g/N and the average share of sampled rows across repetitions (or starts).
+// It only counts the rows already drawn: it changes no random numbers and no estimates.
+export function repeatedSampling({ method, values, n, reps, seed, strata, strataKey = "", population = "", coverageGroups = null }) {
   const N = values.length;
   checkSize(N, n);
-  const mu = trueMean(values);
-  const base = { method, n, N, trueMean: mu, strataKey: method === "stratified" ? strataKey : "" };
+  const mu = trueMean(values); // true mean of THIS population, from its own rows
+  const base = { method, n, N, population, trueMean: mu, strataKey: method === "stratified" ? strataKey : "" };
+  const counts = coverageGroups ? new Array(coverageGroups.levels.length).fill(0) : null;
+  const take = (indices) => {
+    if (counts) for (const i of indices) counts[coverageGroups.index[i]]++;
+    return sampleMean(values, indices);
+  };
+  const coverage = (count) =>
+    counts && {
+      levels: coverageGroups.levels,
+      populationShare: coverageGroups.levels.map((_, g) => coverageGroups.index.filter((x) => x === g).length / N),
+      sampleShare: counts.map((c) => c / (n * count)),
+    };
 
   if (method === "systematic" && N % n === 0) {
-    const { starts, estimates } = systematicEnumeration(values, n);
-    return { ...base, type: "exact", seed: null, count: starts.length, starts, design: "whole", k: N / n, estimates, ...summarizeEstimates(estimates, mu) };
+    const k = N / n;
+    const starts = [];
+    const estimates = [];
+    for (let r = 1; r <= k; r++) {
+      starts.push(r);
+      estimates.push(take(systematicRowsFromStart(N, n, r)));
+    }
+    return { ...base, type: "exact", seed: null, count: k, starts, design: "whole", k, estimates, coverage: coverage(k), ...summarizeEstimates(estimates, mu) };
   }
 
   if (!Number.isInteger(reps) || reps < MIN_REPS || reps > MAX_REPS) {
     throw new Error(`repetitions must be a whole number from ${MIN_REPS} to ${MAX_REPS} (got ${reps})`);
   }
   if (!isValidSeed(seed)) throw new Error(`seed must be a whole number from 0 to ${MAX_SEED}`);
-  const rng = mulberry32(conditionSeed(seed, method, n, base.strataKey));
+  const rng = mulberry32(conditionSeed(seed, method, n, base.strataKey + (population ? `|${population}` : "")));
   const estimates = new Array(reps);
   let extra = {};
   if (method === "srs") {
-    for (let i = 0; i < reps; i++) estimates[i] = sampleMean(values, srsIndices(N, n, rng));
+    for (let i = 0; i < reps; i++) estimates[i] = take(srsIndices(N, n, rng));
   } else if (method === "systematic") {
-    for (let i = 0; i < reps; i++) estimates[i] = sampleMean(values, systematicSample(N, n, rng).indices);
+    for (let i = 0; i < reps; i++) estimates[i] = take(systematicSample(N, n, rng).indices);
     extra = { design: "fractional", k: N / n };
   } else if (method === "stratified") {
     const alloc = proportionalAllocation(strata.map((s) => s.indices.length), n);
     if (!alloc.ok) throw new Error(alloc.reason);
-    for (let i = 0; i < reps; i++) estimates[i] = stratifiedSample(strata, values, n, rng).estimate;
+    for (let i = 0; i < reps; i++) {
+      const s = stratifiedSample(strata, values, n, rng);
+      if (counts) for (const j of s.indices) counts[coverageGroups.index[j]]++;
+      estimates[i] = s.estimate; // population-weighted estimator
+    }
     extra = { allocation: strata.map((s, h) => ({ label: s.label, N_h: s.indices.length, n_h: alloc.allocation[h] })) };
   } else {
     throw new Error(`unknown method "${method}"`);
   }
-  return { ...base, type: "Monte Carlo", seed, count: reps, estimates, ...extra, ...summarizeEstimates(estimates, mu) };
+  return { ...base, type: "Monte Carlo", seed, count: reps, estimates, ...extra, coverage: coverage(reps), ...summarizeEstimates(estimates, mu) };
 }
 
 // ---------- One single sample for the display ----------

@@ -8,6 +8,7 @@ import Timeline from "./Timeline.jsx";
 import Controls from "./Controls.jsx";
 import RulePanel, { dec, stepCalc } from "./RulePanel.jsx";
 import Experiments from "./Experiments.jsx";
+import Challenge from "./Challenge.jsx";
 
 const fmt = (x) => x.toFixed(2);
 const int = (x) => x.toLocaleString("en-US");
@@ -215,6 +216,8 @@ export default function App() {
       </section>
 
       <Experiments values={values} rows={population} />
+
+      <Challenge rows={population} />
     </main>
   );
 }

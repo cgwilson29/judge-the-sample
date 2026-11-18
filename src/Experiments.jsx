@@ -10,7 +10,7 @@ const f2 = (x) => x.toFixed(2);
 const signed = (x) => `${x >= 0 ? "+" : "−"}${f2(Math.abs(x))}`;
 const parse = (t) => (String(t).trim() === "" ? NaN : Number(t));
 
-function settingsText(r, columnName) {
+export function settingsText(r, columnName) {
   if (r.method === "srs") return "Without replacement";
   if (r.method === "systematic") {
     return r.type === "exact"

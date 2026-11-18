@@ -412,3 +412,127 @@ test("summary: constant population gives bias = SD = RMSE = 0 for every method",
     assert.ok(Math.abs(r.bias) < 1e-12 && r.sd < 1e-12 && r.rmse < 1e-12, method);
   }
 });
+
+// ---------- Challenge (stage 5) ----------
+// These checks never print or interpret challenge results.
+import { createHash } from "node:crypto";
+import { shuffledCopy, groupIndexOf } from "../src/population.js";
+import { runChallenge } from "../src/challenge.js";
+
+const DOCUMENTED_SHA256 = "40be3d58fea1c1aa12b58be75d26460baa8c8a988caac34ff22f3262e98cf5e8"; // data/README.md
+
+test("challenge: the data file on disk is unchanged (SHA-256 matches data/README.md), also after building a modified copy", () => {
+  const hash = () => createHash("sha256").update(readFileSync(new URL("../data/heart_rate_week.csv", import.meta.url))).digest("hex");
+  assert.equal(hash(), DOCUMENTED_SHA256);
+  assert.equal(manifest.sha256, DOCUMENTED_SHA256);
+  shuffledCopy(rows, mulberry32(1));
+  runChallenge({ baseRows: rows, modRows: shuffledCopy(rows, mulberry32(1)), shuffleSeed: 1, n: 100, reps: 100, seed: 1, strataKey: "band" });
+  assert.equal(hash(), DOCUMENTED_SHA256);
+});
+
+test("challenge: shuffled copy is a permutation of all rows; original rows untouched; same shuffle seed -> same order", () => {
+  const before = JSON.stringify(rows);
+  const copy = shuffledCopy(rows, mulberry32(42));
+  assert.equal(JSON.stringify(rows), before); // baseline in memory unchanged
+  assert.equal(copy.length, N);
+  copy.forEach((r, i) => assert.equal(r.row_id, i + 1));
+  assert.deepEqual([...copy.map((r) => r.orig_row_id)].sort((a, b) => a - b), rows.map((r) => r.row_id));
+  for (const r of copy) {
+    const o = rows[r.orig_row_id - 1];
+    assert.equal(r.heart_rate_bpm, o.heart_rate_bpm);
+    assert.equal(r.timestamp, o.timestamp);
+    assert.equal(r.activity_state, o.activity_state);
+  }
+  assert.deepEqual(shuffledCopy(rows, mulberry32(42)).map((r) => r.orig_row_id), copy.map((r) => r.orig_row_id));
+  assert.notDeepEqual(copy.map((r) => r.orig_row_id), rows.map((r) => r.row_id)); // order did change for this seed
+});
+
+test("challenge: modified true mean = mean of the modified rows, and reordering alone leaves it unchanged", () => {
+  const copy = shuffledCopy(rows, mulberry32(7));
+  const modVals = copy.map((r) => r[TARGET]);
+  let s = 0;
+  for (const v of modVals) s += v;
+  assert.ok(Math.abs(trueMean(modVals) - s / copy.length) < 1e-9);
+  assert.ok(Math.abs(trueMean(modVals) - trueMean(values)) < 1e-9);
+  // small synthetic population: exact known answer
+  const small = [3, 9, 1, 7, 5, 11];
+  const reordered = [11, 1, 9, 5, 3, 7];
+  assert.equal(trueMean(small), 6);
+  assert.equal(trueMean(reordered), 6);
+  // each challenge result is judged against the true mean of its OWN population
+  const conds = runChallenge({ baseRows: rows, modRows: copy, shuffleSeed: 7, n: 100, reps: 100, seed: 3, strataKey: "band" });
+  for (const c of conds) {
+    const own = c.populationLabel === "baseline" ? values : modVals;
+    assert.ok(Math.abs(c.result.trueMean - trueMean(own)) < 1e-12);
+    assert.ok(Math.abs(c.result.bias - (c.result.meanOfEstimates - c.result.trueMean)) < 1e-12);
+  }
+});
+
+test("challenge: systematic design is re-checked for the population's own N", () => {
+  const vals12 = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+  const vals13 = [...vals12, 13]; // a modified copy with a different N
+  assert.equal(repeatedSampling({ method: "systematic", values: vals12, n: 3, reps: 100, seed: 1 }).type, "exact");
+  const r13 = repeatedSampling({ method: "systematic", values: vals13, n: 3, reps: 100, seed: 1, population: "modified:test" });
+  assert.equal(r13.type, "Monte Carlo");
+  assert.equal(r13.design, "fractional");
+  assert.equal(r13.k, 13 / 3);
+  for (const n of [100, 8, 7]) {
+    const conds = runChallenge({ baseRows: rows, modRows: shuffledCopy(rows, mulberry32(2)), shuffleSeed: 2, n, reps: 100, seed: 1, strataKey: "band" });
+    for (const c of conds.filter((x) => x.method === "systematic")) {
+      assert.equal(c.result.type, N % n === 0 ? "exact" : "Monte Carlo");
+      assert.equal(c.result.k, c.result.N / n);
+    }
+  }
+});
+
+test("challenge: systematic sampling on a modified copy counts rows in the copy's order (known answer)", () => {
+  const base = [10, 20, 30, 40, 50, 60]; // n = 2, k = 3 -> exact, starts 1..3
+  const copyVals = [60, 10, 50, 20, 40, 30]; // a reordering of the same values
+  const r = repeatedSampling({ method: "systematic", values: copyVals, n: 2, reps: 100, seed: 1, population: "modified:test" });
+  assert.equal(r.type, "exact");
+  // start 1 -> positions 1,4 -> 60,20 ; start 2 -> 10,40 ; start 3 -> 50,30
+  assert.deepEqual(r.estimates, [40, 25, 40]);
+  assert.equal(trueMean(copyVals), trueMean(base));
+});
+
+test("challenge: all four results use the same n, report repetitions/starts, and are labelled", () => {
+  const copy = shuffledCopy(rows, mulberry32(9));
+  for (const n of [100, 10, 8]) {
+    const conds = runChallenge({ baseRows: rows, modRows: copy, shuffleSeed: 9, n, reps: 100, seed: 4, strataKey: "band" });
+    assert.equal(conds.length, 4);
+    assert.deepEqual(conds.map((c) => `${c.method}/${c.populationLabel}`), ["systematic/baseline", "systematic/modified", "stratified/baseline", "stratified/modified"]);
+    for (const c of conds) {
+      assert.equal(c.result.n, n);
+      assert.equal(c.result.estimates.length, c.result.count);
+      assert.ok(c.result.type === "exact" ? c.result.seed === null : c.result.seed === 4 && c.result.count === 100);
+      assert.ok(Math.abs(c.result.rmse ** 2 - (c.result.bias ** 2 + c.result.sd ** 2)) < 1e-9);
+    }
+  }
+});
+
+test("challenge: the same seeds reproduce the same numbers", () => {
+  const go = () =>
+    runChallenge({ baseRows: rows, modRows: shuffledCopy(rows, mulberry32(11)), shuffleSeed: 11, n: 100, reps: 200, seed: DEFAULTS.seed, strataKey: "band" });
+  assert.deepEqual(go(), go());
+});
+
+test("challenge: baseline results equal Experiment A's for the same settings; coverage does not change the draws", () => {
+  const strataBand = groupRows(rows, "band");
+  const conds = runChallenge({ baseRows: rows, modRows: shuffledCopy(rows, mulberry32(5)), shuffleSeed: 5, n: 100, reps: 100, seed: 8, strataKey: "band" });
+  const sysA = repeatedSampling({ method: "systematic", values, n: 100, reps: 100, seed: 8 });
+  const strA = repeatedSampling({ method: "stratified", values, n: 100, reps: 100, seed: 8, strata: strataBand, strataKey: "band" });
+  assert.deepEqual(conds[0].result.estimates, sysA.estimates);
+  assert.deepEqual(conds[2].result.estimates, strA.estimates);
+});
+
+test("challenge: coverage shares sum to 1 and count n × repetitions rows", () => {
+  const groups = groupIndexOf(rows, "band");
+  for (const method of ["systematic", "stratified"]) {
+    const r = repeatedSampling({ method, values, n: 100, reps: 100, seed: 2, strata: groupRows(rows, "band"), strataKey: "band", coverageGroups: groups });
+    const sumS = r.coverage.sampleShare.reduce((a, b) => a + b, 0);
+    const sumP = r.coverage.populationShare.reduce((a, b) => a + b, 0);
+    assert.ok(Math.abs(sumS - 1) < 1e-12 && Math.abs(sumP - 1) < 1e-12);
+    const totalRows = r.coverage.sampleShare.reduce((a, s) => a + s * 100 * 100, 0);
+    assert.ok(Math.abs(totalRows - 100 * 100) < 1e-6);
+  }
+});
