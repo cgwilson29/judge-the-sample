@@ -1,5 +1,8 @@
 // Chart.js defaults for the dark neon theme (display only).
-import { Chart } from "chart.js";
+import { Chart, Tooltip } from "chart.js";
+
+// The tooltip defaults only exist once the Tooltip plugin is registered, so register it first.
+Chart.register(Tooltip);
 
 Chart.defaults.color = "#8fb4c4";
 Chart.defaults.borderColor = "rgba(0, 229, 255, 0.14)";

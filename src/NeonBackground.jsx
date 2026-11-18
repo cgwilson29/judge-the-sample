@@ -77,10 +77,10 @@ export default function NeonBackground() {
       scene.add(moving);
 
       // Horizon glow (cyan core, orange rim).
-      const glowCyan = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(THREE, "0,229,255"), blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, fog: false }));
-      glowCyan.scale.set(140, 40, 1);
-      glowCyan.position.set(0, 4, -FAR + 5);
-      const glowOrange = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(THREE, "255,155,33"), blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, fog: false, opacity: 0.35 }));
+      const glowCyan = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(THREE, "0,229,255"), blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, fog: false, opacity: 0.4 }));
+      glowCyan.scale.set(120, 16, 1);
+      glowCyan.position.set(0, 1.5, -FAR + 5);
+      const glowOrange = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(THREE, "255,155,33"), blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, fog: false, opacity: 0.22 }));
       glowOrange.scale.set(220, 18, 1);
       glowOrange.position.set(0, 0.5, -FAR + 4);
       scene.add(glowCyan, glowOrange);
@@ -109,7 +109,7 @@ export default function NeonBackground() {
       // Bloom gives the neon glow.
       const composer = new EffectComposer(renderer);
       composer.addPass(new RenderPass(scene, camera));
-      const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 1.05, 0.55, 0.05);
+      const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.75, 0.5, 0.15);
       composer.addPass(bloom);
       composer.addPass(new OutputPass());
 
